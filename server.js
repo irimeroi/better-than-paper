@@ -7,17 +7,17 @@ const uuid = require('./helpers/uuid.js')
 //initialized express
 const app = express();
 //express runs on specified port
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 
 //static middleware pointing to the public folder
 app.use(express.static('public'));
 //lines for every app - tell the server we're passing json
 app.use(express.json());
-app.use(express.urlencoded({ extended:true }));
+app.use(express.urlencoded({ extended: true }));
 
 //linking static files to the server
 //homepage
-app.get('/', (req, res) => 
+app.get('/', (req, res) =>
     res.sendFile(path.join(__dirname, 'public/index.html'))
 );
 //notespage
@@ -28,32 +28,66 @@ app.get('/notes', (req, res) =>
 //get request for all notes
 app.get('/api/notes', (req, res) => {
     const notes = require('./db/notes.json');
-    return res.json(notes)
+    fs.readFile('./db/notes.json', 'utf-8', function (err, data) {
+        if (err) {
+            return err;
+        }
+        console.log(data);
+        res.json(JSON.parse(data));
+    })
 });
 
 //post request to add a note
 app.post('/api/notes', (req, res) => {
-    const notes = require('./db/notes.json');
-    const { title, text } = req.body;
-    const newNote = {
-        title,
-        text,
-        id: uuid(),
-    };
-    notes.push(newNote);
-    fs.writeFile('./db/notes.json', JSON.stringify(notes, null, 2), (err) => {
+    // const notes = require('./db/notes.json');
+    fs.readFile('./db/notes.json', 'utf-8', function (err, data) {
         if (err) {
-            console.log(err)
-        } else {
-            res.send(201).end();
-            // res.json(notes)
+            return err;
         }
-    });
+        console.log(data);
+        const notes = JSON.parse(data);
+        // res.json(JSON.parse(data));
+        const { title, text } = req.body;
+        const newNote = {
+            title,
+            text,
+            id: uuid(),
+        };
+        notes.push(newNote);
+        fs.writeFile('./db/notes.json', JSON.stringify(notes, null, 2), (err) => {
+            if (err) {
+                console.log(err)
+            } else {
+                res.status(200).end();
+                // res.json(notes)
+            }
+        });
+    })
 })
 
-app.delete('api/notes/:id', (req, res) => {
-    // const notes = require('./db/notes.json');
-    // notes.filter(req.params.id);
+app.delete('/api/notes/:id', (req, res) => {
+    console.log('Hello')
+    fs.readFile('./db/notes.json', 'utf-8', function (err, notes) {
+        if (err) {
+            return err;
+        }
+        const filteredNotes = JSON.parse(notes).filter(function (note) {
+            if (note.id !== req.params.id) {
+                return true;
+            } else {
+                return false;
+            }
+        });
+        console.log(filteredNotes);
+        fs.writeFile('./db/notes.json', JSON.stringify(filteredNotes, null, 2), (err) => {
+            if (err) {
+                console.log(err)
+            } else {
+                res.status(200).end();
+                // res.json(notes)
+            }
+        });
+    })
 });
 
 app.get('*', (req, res) => {
